@@ -8,6 +8,8 @@
 --   admin@rentamax.pe         Admin2026      ADMINISTRADOR
 --   ana.silva@rentamax.pe     RentaMax2026   SUPERVISOR
 --   carlos.mendoza@rentamax.pe RentaMax2026  OPERADOR
+-- Cada usuario tiene su propio hash: BCrypt añade una sal aleatoria, asi que dos cuentas
+-- con la misma contraseña NO comparten el mismo hash.
 -- En un entorno real estas contraseñas se cambian.
 -- =====================================================================
 SET NAMES utf8mb4;
@@ -25,7 +27,7 @@ INSERT IGNORE INTO usuario (nombre, correo, contrasena_hash, rol_id)
 INSERT IGNORE INTO usuario (nombre, correo, contrasena_hash, rol_id)
   SELECT 'Ana Silva', 'ana.silva@rentamax.pe', '$2a$10$NVUOYq39Yvinrqem00l4IuGLazEWjil2vVf2o7tvXlFWbdME.x1AO', id FROM rol WHERE nombre = 'SUPERVISOR';
 INSERT IGNORE INTO usuario (nombre, correo, contrasena_hash, rol_id)
-  SELECT 'Carlos Mendoza', 'carlos.mendoza@rentamax.pe', '$2a$10$NVUOYq39Yvinrqem00l4IuGLazEWjil2vVf2o7tvXlFWbdME.x1AO', id FROM rol WHERE nombre = 'OPERADOR';
+  SELECT 'Carlos Mendoza', 'carlos.mendoza@rentamax.pe', '$2a$10$etbgBN0xIwn12lSW5p9bmOjcPj4DzVFztUTMXYtW.SNR1HFTpQKyK', id FROM rol WHERE nombre = 'OPERADOR';
 
 -- Categorías
 INSERT IGNORE INTO categoria (nombre) VALUES
