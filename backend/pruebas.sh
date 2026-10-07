@@ -1,12 +1,17 @@
 #!/usr/bin/env bash
 # =====================================================================
 # RentaMax — Pruebas de integracion y seguridad (APF2)
-# Uso local:  ./pruebas.sh
-# Uso nube:   BASE_URL=https://TU-SERVICIO.onrender.com ./pruebas.sh
+# Uso (las claves NO viven en el repositorio; se pasan por variables de entorno):
+#   export BASE_URL=https://TU-SERVICIO.onrender.com
+#   export RM_PASS_OPERADOR=...  RM_PASS_SUPERVISOR=...  RM_PASS_ADMIN=...
+#   ./pruebas.sh
 # Requiere solo bash y curl (en Windows: Git Bash).
 # Cada linea muestra OK o FALLO; al final se resume.
 # =====================================================================
-BASE="${BASE_URL:-http://localhost:8080}"
+BASE="${BASE_URL:?Define BASE_URL con la URL publica HTTPS del servicio}"
+: "${RM_PASS_OPERADOR:?Define RM_PASS_OPERADOR}"
+: "${RM_PASS_SUPERVISOR:?Define RM_PASS_SUPERVISOR}"
+: "${RM_PASS_ADMIN:?Define RM_PASS_ADMIN}"
 ORIGEN_OK="${ORIGEN_FRONT:-https://integrador2-grupo7.vercel.app}"
 OK=0; ERR=0
 SUFIJO="$(date +%s)"
@@ -58,7 +63,7 @@ req POST /api/auth/register "" "{\"nombre\":\"Usuario Prueba\",\"email\":\"$EMAI
 espera "Registro duplicado" 409
 
 echo "-- 5. Rol OPERADOR (solo lectura)"
-login "carlos.mendoza@rentamax.pe" "RentaMax2026"; espera "Login operador" 200; T_OP="$(token)"
+login "carlos.mendoza@rentamax.pe" "$RM_PASS_OPERADOR"; espera "Login operador" 200; T_OP="$(token)"
 [ -n "$T_OP" ] && pasa "Token JWT recibido" || falla "Token JWT recibido" "vacio"
 req GET /api/equipos "$T_OP";        espera "Listar equipos (desde la BD)" 200; contiene "Aparece EQ-001 del seed" '"codigo":"EQ-001"'
 req GET "/api/equipos?estado=DISPONIBLE" "$T_OP"; espera "Filtrar por estado" 200; nocontiene "Sin equipos ALQUILADOS en el filtro" '"estado":"ALQUILADO"'
@@ -72,7 +77,7 @@ req DELETE /api/equipos/1 "$T_OP";   espera "OPERADOR no puede eliminar" 403
 req GET /api/admin/usuarios "$T_OP"; espera "OPERADOR no entra a /api/admin" 403
 
 echo "-- 6. Rol SUPERVISOR (alta y edicion de equipos)"
-login "ana.silva@rentamax.pe" "RentaMax2026"; espera "Login supervisor" 200; T_SUP="$(token)"
+login "ana.silva@rentamax.pe" "$RM_PASS_SUPERVISOR"; espera "Login supervisor" 200; T_SUP="$(token)"
 req GET /api/clientes "$T_SUP";      espera "Listar clientes" 200; contiene "Telefono completo para SUPERVISOR" '987654321'
 req POST /api/equipos "$T_SUP" "{\"codigo\":\"$COD\",\"nombre\":\"Equipo de prueba\",\"categoriaId\":1,\"estado\":\"DISPONIBLE\",\"stockDisponible\":3,\"stockMinimo\":1}"
 espera "Crear equipo" 201; ID="$(echo "$BODY" | sed -n 's/.*"id":\([0-9]*\).*/\1/p')"
@@ -90,7 +95,7 @@ espera "Editar equipo" 200; contiene "Cambio de estado guardado" '"estado":"MANT
 req DELETE "/api/equipos/$ID" "$T_SUP"; espera "SUPERVISOR no puede eliminar" 403
 
 echo "-- 7. Rol ADMINISTRADOR"
-login "admin@rentamax.pe" "Admin2026"; espera "Login administrador" 200; T_AD="$(token)"
+login "admin@rentamax.pe" "$RM_PASS_ADMIN"; espera "Login administrador" 200; T_AD="$(token)"
 req GET /api/admin/usuarios "$T_AD"; espera "Listar usuarios" 200; nocontiene "No expone contrasena_hash" 'contrasena'; nocontiene "No expone hashes BCrypt" '$2a$'
 req GET /api/admin/roles "$T_AD";    espera "Listar roles y permisos (tabla rol)" 200; contiene "Permisos desde la BD" 'permisosAltaEquipo'
 req DELETE "/api/equipos/$ID" "$T_AD"; espera "Eliminar equipo de prueba" 204

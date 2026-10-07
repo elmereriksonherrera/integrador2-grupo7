@@ -33,10 +33,13 @@ public class SecurityConfig {
         this.jwtService = jwtService;
     }
 
-    /** Hashes irreversibles con sal aleatoria (OWASP A02). */
+    /**
+     * Hashes irreversibles con sal aleatoria (OWASP A02).
+     * Coste 10 explicito = 2^10 = 1024 iteraciones; el hash guardado se ve asi: $2a$10$ + salt (22) + hash (31).
+     */
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+        return new BCryptPasswordEncoder(10);
     }
 
     /** Blindaje de endpoints. Las reglas se evaluan de arriba hacia abajo. */
