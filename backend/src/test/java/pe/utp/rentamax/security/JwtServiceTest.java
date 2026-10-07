@@ -57,6 +57,14 @@ class JwtServiceTest {
     }
 
     @Test
+    @DisplayName("El header declara HMAC-SHA256 (HS256) aunque la clave sea mas larga que 256 bits")
+    void headerEsHs256() {
+        String token = jwtService.generarToken(supervisora); // la clave de prueba tiene 384 bits
+        String header = new String(Base64.getUrlDecoder().decode(token.split("\\.")[0]), StandardCharsets.UTF_8);
+        assertTrue(header.contains("\"alg\":\"HS256\""), header);
+    }
+
+    @Test
     @DisplayName("El payload (Base64URL, no cifrado) no contiene contrasenas ni hashes")
     void payloadNoContieneDatosSensibles() {
         String token = jwtService.generarToken(supervisora);

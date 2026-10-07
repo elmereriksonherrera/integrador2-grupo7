@@ -66,7 +66,7 @@ Las contraseñas de las cuentas de demostración **no están en el repositorio**
 |---|---|
 | `DB_URL` | `jdbc:mysql://HOST:PUERTO/rentamax?sslMode=REQUIRED&serverTimezone=America/Lima` |
 | `DB_USER`, `DB_PASSWORD` | credenciales de la base en Aiven (solo en el panel de Render) |
-| `JWT_SECRET` | clave Base64 de ≥ 32 bytes (se genera una nueva para producción) |
+| `JWT_SECRET` | clave Base64 de ≥ 32 bytes (se genera una nueva para producción). El token siempre se firma con HMAC-SHA256 (HS256) |
 | `CORS_ORIGINS` | `https://integrador2-grupo7.vercel.app` (solo el dominio del front; nunca `*`) |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | opcionales: solo se usan si la BD no tiene ningún administrador |
 

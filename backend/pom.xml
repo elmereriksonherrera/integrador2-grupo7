@@ -48,6 +48,14 @@
             <artifactId>spring-boot-starter-data-jpa</artifactId>
         </dependency>
 
+        <!-- Pool de conexiones HikariCP (la version la gestiona Spring Boot). Se declara de forma
+             explicita aunque spring-boot-starter-data-jpa ya lo trae; sus parametros estan en
+             application.properties (spring.datasource.hikari.*). -->
+        <dependency>
+            <groupId>com.zaxxer</groupId>
+            <artifactId>HikariCP</artifactId>
+        </dependency>
+
         <!-- Driver de MySQL -->
         <dependency>
             <groupId>com.mysql</groupId>
