@@ -74,7 +74,7 @@ Si falta una variable obligatoria o la clave JWT es débil, la aplicación **no 
 Render asigna el puerto con la variable `PORT` (la app la lee con `server.port=${PORT:8080}`).
 
 ## Pool de conexiones (HikariCP)
-`maximum-pool-size=10`, `minimum-idle=5`, `connection-timeout=30000`, `idle-timeout=600000`, `max-lifetime=1800000`. Regla: tamaño ≈ (núcleos × 2) + discos; un pool muy grande gasta memoria y uno muy pequeño genera timeouts. Si un endpoint tarda más de 500 ms, revisar índices, el pool y consultas N+1.
+`maximum-pool-size=10`, `minimum-idle=5`, `connection-timeout=20000`, `idle-timeout=600000`, `max-lifetime=1800000`. Regla: tamaño ≈ (núcleos × 2) + discos; un pool muy grande gasta memoria y uno muy pequeño genera timeouts. Si un endpoint tarda más de 500 ms, revisar índices, el pool y consultas N+1.
 
 ## Alcance actual y próximo sprint
 Implementado: autenticación, RBAC, CRUD de equipos, lectura de categorías y clientes sobre la BD real.

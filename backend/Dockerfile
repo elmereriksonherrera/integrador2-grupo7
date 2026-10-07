@@ -5,19 +5,19 @@
 # =====================================================================
 
 # ---------- Etapa 1: compilar ----------
-FROM maven:3.9-eclipse-temurin-21 AS build
+FROM maven:3.9-eclipse-temurin-21-alpine AS build
 WORKDIR /app
 COPY pom.xml .
 COPY src ./src
 RUN mvn -B -DskipTests package
 
 # ---------- Etapa 2: ejecutar ----------
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 # Buena practica: no ejecutar como root
-RUN useradd --system --uid 1001 rentamax
+RUN addgroup -S rentamax && adduser -S -u 1001 -G rentamax rentamax
 COPY --from=build /app/target/rentamax-backend.jar app.jar
-USER rentamax
+USER 1001
 
 # Perfil de produccion: exige todas las variables de entorno (DB_URL, DB_USER, DB_PASSWORD, JWT_SECRET, CORS_ORIGINS)
 ENV SPRING_PROFILES_ACTIVE=prod
