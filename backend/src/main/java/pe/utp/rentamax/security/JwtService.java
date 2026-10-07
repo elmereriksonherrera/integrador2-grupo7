@@ -45,7 +45,8 @@ public class JwtService {
                 .claim("perms", permisosDe(usuario.getRol()))
                 .issuedAt(ahora)
                 .expiration(new Date(ahora.getTime() + expiracionMs))
-                .signWith(clave)
+                // HS256 explicito: sin esto, jjwt elige HS384/HS512 si la clave es mas larga (48/64 bytes).
+                .signWith(clave, Jwts.SIG.HS256)
                 .compact();
     }
 

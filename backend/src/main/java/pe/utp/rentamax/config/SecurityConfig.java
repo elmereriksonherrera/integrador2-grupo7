@@ -72,8 +72,14 @@ public class SecurityConfig {
             @Value("${app.cors.allowed-origins}") String[] origenes,
             @Value("${app.cors.allowed-origin-patterns:}") String[] patrones) {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(Arrays.stream(origenes).map(String::trim).filter(s -> !s.isEmpty()).toList());
+        List<String> permitidos = Arrays.stream(origenes).map(String::trim).filter(s -> !s.isEmpty()).toList();
         List<String> pat = Arrays.stream(patrones).map(String::trim).filter(s -> !s.isEmpty()).toList();
+        // Fail-fast: origins "*" abre la puerta a ataques desde cualquier sitio web (falla grave).
+        if (permitidos.contains("*") || pat.contains("*")) {
+            throw new IllegalStateException(
+                    "CORS_ORIGINS / CORS_PATTERNS no puede ser '*': indique solo el dominio del front-end.");
+        }
+        config.setAllowedOrigins(permitidos);
         if (!pat.isEmpty()) {
             config.setAllowedOriginPatterns(pat);
         }

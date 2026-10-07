@@ -66,7 +66,8 @@ Las contraseñas de las cuentas de demostración **no están en el repositorio**
 |---|---|
 | `DB_URL` | `jdbc:mysql://HOST:PUERTO/rentamax?sslMode=REQUIRED&serverTimezone=America/Lima` |
 | `DB_USER`, `DB_PASSWORD` | credenciales de la base en Aiven (solo en el panel de Render) |
-| `JWT_SECRET` | clave Base64 de ≥ 32 bytes (se genera una nueva para producción) |
+| `SPRING_DATASOURCE_URL/USERNAME/PASSWORD` | nombres estándar de la cátedra: si existen, tienen prioridad sobre `DB_*` |
+| `JWT_SECRET` | clave Base64 de ≥ 32 bytes (se genera una nueva para producción). El token siempre se firma con HMAC-SHA256 (HS256) |
 | `CORS_ORIGINS` | `https://integrador2-grupo7.vercel.app` (solo el dominio del front; nunca `*`) |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | opcionales: solo se usan si la BD no tiene ningún administrador |
 
@@ -74,7 +75,7 @@ Si falta una variable obligatoria o la clave JWT es débil, la aplicación **no 
 Render asigna el puerto con la variable `PORT` (la app la lee con `server.port=${PORT:8080}`).
 
 ## Pool de conexiones (HikariCP)
-`maximum-pool-size=10`, `minimum-idle=5`, `connection-timeout=30000`, `idle-timeout=600000`, `max-lifetime=1800000`. Regla: tamaño ≈ (núcleos × 2) + discos; un pool muy grande gasta memoria y uno muy pequeño genera timeouts. Si un endpoint tarda más de 500 ms, revisar índices, el pool y consultas N+1.
+`maximum-pool-size=10`, `minimum-idle=5`, `connection-timeout=20000`, `idle-timeout=600000`, `max-lifetime=1800000`. Regla: tamaño ≈ (núcleos × 2) + discos; un pool muy grande gasta memoria y uno muy pequeño genera timeouts. Si un endpoint tarda más de 500 ms, revisar índices, el pool y consultas N+1.
 
 ## Alcance actual y próximo sprint
 Implementado: autenticación, RBAC, CRUD de equipos, lectura de categorías y clientes sobre la BD real.

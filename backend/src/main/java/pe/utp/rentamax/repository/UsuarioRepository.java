@@ -1,5 +1,6 @@
 package pe.utp.rentamax.repository;
 
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import pe.utp.rentamax.model.Usuario;
 
@@ -11,6 +12,7 @@ import java.util.Optional;
  * parametro, nunca concatenado -> se bloquea "admin' OR '1'='1" (OWASP A03).
  */
 public interface UsuarioRepository extends JpaRepository<Usuario, Integer> {
+    @EntityGraph(attributePaths = "rol") // el rol viaja en la misma consulta (sin segunda consulta)
     Optional<Usuario> findByCorreo(String correo);
     boolean existsByCorreo(String correo);
     boolean existsByRolNombre(String nombreRol);
