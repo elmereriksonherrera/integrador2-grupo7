@@ -18,11 +18,13 @@ npm run dev
 
 ## Cuentas (cada una ve cosas distintas)
 
-| Rol | Correo | Contraseña | Qué puede hacer |
-|-----|--------|------------|-----------------|
-| Operador | carlos.mendoza@rentamax.pe | RentaMax2026 | Alquileres y devoluciones. Inventario solo lectura. DNI enmascarado. |
-| Supervisora | ana.silva@rentamax.pe | RentaMax2026 | Lo anterior + alta de equipos + DNI completo + KPI de mantenimiento. |
-| Administrador | admin@rentamax.pe | Admin2026 | Todo + bitácora de seguridad + botón Demo. |
+Las contraseñas de demostración **no se publican en el repositorio**: se entregan en el informe del APF2 o se piden al equipo.
+
+| Rol | Correo | Qué puede hacer |
+|-----|--------|-----------------|
+| Operador | carlos.mendoza@rentamax.pe | Alquileres y devoluciones. Inventario solo lectura. DNI enmascarado. |
+| Supervisora | ana.silva@rentamax.pe | Lo anterior + alta de equipos + DNI completo + KPI de mantenimiento. |
+| Administrador | admin@rentamax.pe | Todo + bitácora de seguridad + botón Demo. |
 
 Si un rol intenta entrar a una pantalla que no le toca, ve **Acceso restringido**.
 

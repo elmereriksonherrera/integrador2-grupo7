@@ -5,9 +5,10 @@
 -- Las contraseñas están guardadas como hash BCrypt ($2a$10$...), nunca en claro.
 --
 -- Cuentas de DEMOSTRACIÓN (las mismas del front-end de Vercel):
---   admin@rentamax.pe         Admin2026      ADMINISTRADOR
---   ana.silva@rentamax.pe     RentaMax2026   SUPERVISOR
---   carlos.mendoza@rentamax.pe RentaMax2026  OPERADOR
+--   admin@rentamax.pe            ADMINISTRADOR
+--   ana.silva@rentamax.pe        SUPERVISOR
+--   carlos.mendoza@rentamax.pe   OPERADOR
+-- Las contraseñas NO se escriben en el repositorio: se entregan en el informe del APF2.
 -- Cada usuario tiene su propio hash: BCrypt añade una sal aleatoria, asi que dos cuentas
 -- con la misma contraseña NO comparten el mismo hash.
 -- En un entorno real estas contraseñas se cambian.

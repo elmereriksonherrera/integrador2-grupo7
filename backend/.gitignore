@@ -3,3 +3,9 @@ target/
 .idea/
 *.iml
 .vscode/
+
+# Secretos: nunca se suben a GitHub
+.env
+.env.*
+*.env
+application-local.properties

@@ -2,7 +2,7 @@
   "info": {
     "name": "RentaMax - APF2 (BD + Seguridad + Validacion)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Ejecutar con Collection Runner en orden. Cambia la variable baseUrl para alternar entre local (http://localhost:8080) y la nube (https://TU-SERVICIO.onrender.com)."
+    "description": "Ejecutar con Collection Runner en orden, contra la URL publica HTTPS (variable baseUrl). Las contrasenas NO estan en la coleccion: importa tambien RentaMax-APF2.postman_environment.json, elige ese Environment y completa passOperador, passSupervisor y passAdmin (tipo secret). Cada peticion verifica ademas que el tiempo de respuesta sea menor a 500 ms (excepto Health, que despierta el servicio en Render)."
   },
   "item": [
     {
@@ -77,7 +77,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"carlos.mendoza@rentamax.pe\",\n  \"password\": \"RentaMax2026\"\n}",
+              "raw": "{\n  \"email\": \"carlos.mendoza@rentamax.pe\",\n  \"password\": \"{{passOperador}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -129,7 +129,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"ana.silva@rentamax.pe\",\n  \"password\": \"RentaMax2026\"\n}",
+              "raw": "{\n  \"email\": \"ana.silva@rentamax.pe\",\n  \"password\": \"{{passSupervisor}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -181,7 +181,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"admin@rentamax.pe\",\n  \"password\": \"Admin2026\"\n}",
+              "raw": "{\n  \"email\": \"admin@rentamax.pe\",\n  \"password\": \"{{passAdmin}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1483,7 +1483,7 @@
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:8080",
+      "value": "https://rentamax-backend.onrender.com",
       "type": "string"
     },
     {
@@ -1510,6 +1510,23 @@
       "key": "equipoCodigo",
       "value": "",
       "type": "string"
+    }
+  ],
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Prueba no funcional (SLA): ningun endpoint debe tardar 500 ms o mas.",
+          "// Se omite Health porque su proposito es despertar el servicio en Render (arranque en frio).",
+          "if (pm.info.requestName.indexOf('Health') === -1) {",
+          "  pm.test('Tiempo de respuesta menor a 500 ms', function () {",
+          "    pm.expect(pm.response.responseTime).to.be.below(500);",
+          "  });",
+          "}"
+        ]
+      }
     }
   ]
 }

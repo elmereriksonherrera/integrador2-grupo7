@@ -44,31 +44,37 @@ Sin token o con token inválido/alterado: **401**. Equipo inexistente: **404**. 
 | Riesgo | Control en el código |
 |---|---|
 | A01 Control de acceso roto | RBAC en `SecurityConfig` **y** `@PreAuthorize` en los métodos (defensa en profundidad); el rol del registro público no se puede elegir |
-| A02 Fallas criptográficas | BCrypt para contraseñas; JWT firmado (HS384); la clave JWT sale de variable de entorno y debe tener ≥ 256 bits |
+| A02 Fallas criptográficas | BCrypt coste 10 para contraseñas; JWT firmado (HS384); la clave JWT sale de variable de entorno y debe tener ≥ 256 bits |
 | A03 Inyección | Spring Data JPA con consultas parametrizadas; validación de DTO (`@Pattern`, `@Email`, `@Size`); CHECK/UNIQUE/FK en la base |
 | A05 Configuración | CORS solo para el front de Vercel; errores sin trazas; perfil `prod` sin valores por defecto (fail-fast) |
 | A07 Autenticación | mensaje único "Credenciales inválidas" (no revela qué correos existen); token con expiración de 1 hora |
 
 ## Cómo correrlo en tu laptop (VS Code, Windows)
 1. **Un solo MySQL en el puerto 3306:** cierra XAMPP/Wamp y deja activo el servicio `MySQL80`.
-2. **Base de datos (HeidiSQL, conectado como root):** abre y ejecuta, en este orden, `database/schema_v1.sql`, `database/usuario_aplicacion.sql` y `database/seed_v1.sql`.
-3. **VS Code:** instala la extensión *Extension Pack for Java* y abre la carpeta `backend`. En la terminal, `java -version` debe decir 22.
-4. **Arrancar:** en la terminal de VS Code, dentro de `backend`: `.\mvnw.cmd spring-boot:run`. La primera vez descarga Maven y las librerías (unos minutos). Espera `Started RentaMaxApplication`.
-5. **Comprobar:** abre http://localhost:8080/api/health → debe mostrar `"estado":"UP","baseDatos":"UP"`.
-6. **Pruebas:** en Git Bash, `cd backend && ./pruebas.sh` (resultado esperado: `FALLOS=0`). Para carga: `./rendimiento.sh 200 20`. Para Postman: importar `RentaMax-APF2.postman_collection.json` y usar *Run collection*.
+2. **Base de datos (HeidiSQL, conectado como root):** abre y ejecuta, en este orden, `database/schema_v1.sql`, `database/usuario_aplicacion.sql` (antes cambia `<CONTRASENA_FUERTE>` por una clave tuya) y `database/seed_v1.sql`.
+3. **Configuración local sin secretos en Git:** copia `src/main/resources/application-local.properties.example` como `application-local.properties` (esa copia está en `.gitignore`) y completa tus valores.
+4. **VS Code:** instala la extensión *Extension Pack for Java* y abre la carpeta `backend`. En la terminal, `java -version` debe decir 21 o superior.
+5. **Arrancar:** dentro de `backend`: `.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=local"`. Espera `Started RentaMaxApplication`.
+6. **Comprobar:** abre `/api/health` en el puerto 8080 de tu equipo → debe mostrar `"estado":"UP","baseDatos":"UP"`.
+7. **Pruebas unitarias (JUnit 5 + Mockito):** `.\mvnw.cmd test` (no necesitan base de datos).
+8. **Pruebas de integración contra la nube:** en Git Bash define `BASE_URL`, `RM_PASS_OPERADOR`, `RM_PASS_SUPERVISOR` y `RM_PASS_ADMIN` (ver cabecera de `pruebas.sh`) y ejecuta `./pruebas.sh` (esperado: `FALLOS=0`). Carga: `RM_PASS=... ./rendimiento.sh 200 20`. Postman: importar la colección **y** `RentaMax-APF2.postman_environment.json`, completar las contraseñas en el Environment y usar *Run collection*.
 
-Cuentas de demostración (las del seed y del front de Vercel): `admin@rentamax.pe` / `Admin2026` · `ana.silva@rentamax.pe` / `RentaMax2026` · `carlos.mendoza@rentamax.pe` / `RentaMax2026`.
+Las contraseñas de las cuentas de demostración **no están en el repositorio**: se entregan en el informe del APF2.
 
 ## Variables de entorno en la nube (perfil `prod`, ya activo en el Dockerfile)
 | Variable | Ejemplo / uso |
 |---|---|
 | `DB_URL` | `jdbc:mysql://HOST:PUERTO/rentamax?sslMode=REQUIRED&serverTimezone=America/Lima` |
-| `DB_USER`, `DB_PASSWORD` | credenciales de la base en Aiven |
+| `DB_USER`, `DB_PASSWORD` | credenciales de la base en Aiven (solo en el panel de Render) |
 | `JWT_SECRET` | clave Base64 de ≥ 32 bytes (se genera una nueva para producción) |
-| `CORS_ORIGINS` | `https://integrador2-grupo7.vercel.app` |
+| `CORS_ORIGINS` | `https://integrador2-grupo7.vercel.app` (solo el dominio del front; nunca `*`) |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | opcionales: solo se usan si la BD no tiene ningún administrador |
 
 Si falta una variable obligatoria o la clave JWT es débil, la aplicación **no arranca**.
+Render asigna el puerto con la variable `PORT` (la app la lee con `server.port=${PORT:8080}`).
+
+## Pool de conexiones (HikariCP)
+`maximum-pool-size=10`, `minimum-idle=5`, `connection-timeout=30000`, `idle-timeout=600000`, `max-lifetime=1800000`. Regla: tamaño ≈ (núcleos × 2) + discos; un pool muy grande gasta memoria y uno muy pequeño genera timeouts. Si un endpoint tarda más de 500 ms, revisar índices, el pool y consultas N+1.
 
 ## Alcance actual y próximo sprint
 Implementado: autenticación, RBAC, CRUD de equipos, lectura de categorías y clientes sobre la BD real.

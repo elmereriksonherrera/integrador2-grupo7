@@ -2,13 +2,14 @@
 # =====================================================================
 # RentaMax — Prueba de rendimiento y concurrencia (pruebas NO funcionales)
 # Uso:   ./rendimiento.sh [peticiones] [concurrentes]        (por defecto 100 y 10)
-# Nube:  BASE_URL=https://TU-SERVICIO.onrender.com ./rendimiento.sh 200 20
+# Uso:   BASE_URL=https://TU-SERVICIO.onrender.com RM_PASS=... ./rendimiento.sh 200 20
+#        (la clave NO esta en el repositorio; RM_EMAIL opcional, por defecto el operador de demo)
 # Lanza GET /api/equipos con un token valido, en paralelo, y resume latencias.
 # Requiere bash, curl, xargs y awk (en Windows: Git Bash).
 # =====================================================================
-BASE="${BASE_URL:-http://localhost:8080}"
+BASE="${BASE_URL:?Define BASE_URL con la URL publica HTTPS del servicio}"
 N="${1:-100}"; C="${2:-10}"
-EMAIL="${RM_EMAIL:-carlos.mendoza@rentamax.pe}"; PASS="${RM_PASS:-RentaMax2026}"
+EMAIL="${RM_EMAIL:-carlos.mendoza@rentamax.pe}"; PASS="${RM_PASS:?Define RM_PASS}"
 
 TOKEN="$(curl -s -m 30 -X POST -H 'Content-Type: application/json' \
   -d "{\"email\":\"$EMAIL\",\"password\":\"$PASS\"}" "$BASE/api/auth/login" | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')"
