@@ -1,0 +1,44 @@
+name: Cargar base de datos (Aiven)
+
+# Ejecución MANUAL y puntual: crea las tablas (schema_v1.sql) y carga los datos iniciales (seed_v1.sql)
+# en una base MySQL NUEVA de Aiven, sin instalar ningún cliente en tu PC.
+# Las credenciales viven solo en GitHub > Settings > Secrets and variables > Actions:
+#   AIVEN_DB_HOST, AIVEN_DB_PORT, AIVEN_DB_USER, AIVEN_DB_PASSWORD
+# Los scripts son idempotentes (CREATE ... IF NOT EXISTS / INSERT IGNORE): repetirlo no duplica datos.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cargar:
+    name: Crear esquema y datos iniciales
+    runs-on: ubuntu-latest
+    env:
+      MYSQL_PWD: ${{ secrets.AIVEN_DB_PASSWORD }}
+      DB_HOST: ${{ secrets.AIVEN_DB_HOST }}
+      DB_PORT: ${{ secrets.AIVEN_DB_PORT }}
+      DB_USER: ${{ secrets.AIVEN_DB_USER }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verificar que los secretos existen
+        run: |
+          for v in DB_HOST DB_PORT DB_USER MYSQL_PWD; do
+            if [ -z "${!v}" ]; then echo "::error::Falta el secreto para $v"; exit 1; fi
+          done
+
+      - name: Cliente MySQL
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq mysql-client
+
+      - name: Ejecutar esquema y datos
+        run: |
+          M="mysql --host=$DB_HOST --port=$DB_PORT --user=$DB_USER --ssl-mode=REQUIRED"
+          $M < database/schema_v1.sql
+          $M < database/seed_v1.sql
+
+      - name: Verificar conteos (evidencia)
+        run: |
+          mysql --host=$DB_HOST --port=$DB_PORT --user=$DB_USER --ssl-mode=REQUIRED --table < database/verificacion_conteos.sql
