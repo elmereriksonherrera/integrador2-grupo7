@@ -4,7 +4,8 @@ name: Cargar base de datos (Aiven)
 # en una base MySQL NUEVA de Aiven, sin instalar ningún cliente en tu PC.
 # Las credenciales viven solo en GitHub > Settings > Secrets and variables > Actions:
 #   AIVEN_DB_HOST, AIVEN_DB_PORT, AIVEN_DB_USER, AIVEN_DB_PASSWORD
-# Los scripts son idempotentes (CREATE ... IF NOT EXISTS / INSERT IGNORE): repetirlo no duplica datos.
+# Pensado para una base NUEVA y vacía: el seed usa INSERT IGNORE (no duplica), pero schema_v1.sql crea tablas
+# sin IF NOT EXISTS, así que una segunda ejecución falla en el esquema (sin dañar los datos existentes).
 
 on:
   workflow_dispatch:
