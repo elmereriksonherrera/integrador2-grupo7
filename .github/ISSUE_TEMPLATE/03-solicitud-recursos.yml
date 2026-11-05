@@ -1,0 +1,34 @@
+name: "REC-ACT-02 · Provisión de recursos en la nube"
+description: Más capacidad, nueva instancia, base de datos o variable de entorno en Render, Aiven o Vercel. Prioridad alta.
+title: "[REC-ACT-02] "
+labels: ["tipo:recursos", "prioridad:alta", "estado:1-registrada"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **No pegues credenciales ni cadenas de conexión.** Los valores sensibles solo viven en el panel del proveedor (Render, Aiven) y en los secretos de GitHub.
+  - type: dropdown
+    id: plataforma
+    attributes:
+      label: Plataforma
+      options: ["Render (backend)", "Aiven (MySQL)", "Vercel (front)", "GitHub (CI/CD)"]
+    validations:
+      required: true
+  - type: textarea
+    id: recurso
+    attributes:
+      label: Recurso o cambio de capacidad que se necesita
+      placeholder: "Ej. Pasar el backend a un plan sin arranque en frío"
+    validations:
+      required: true
+  - type: textarea
+    id: motivo
+    attributes:
+      label: Evidencia que lo justifica (métricas, umbral superado)
+      placeholder: "Ej. p95 de 1.7 s con 10 usuarios simultáneos (umbral: 1 s)"
+    validations:
+      required: true
+  - type: textarea
+    id: costo
+    attributes:
+      label: Costo estimado y plan de reversa

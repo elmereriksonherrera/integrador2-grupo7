@@ -1,0 +1,46 @@
+name: "RFC · Solicitud de cambio"
+description: Registrar un cambio a la aplicación, la infraestructura, la documentación o el calendario ANTES de ejecutarlo.
+title: "[RFC] "
+labels: ["tipo:cambio", "estado:1-registrada"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Todo cambio sigue el plan de control de cambios (`docs/gestion-cambios.md`). Un cambio normal se implementa con una rama y un Pull Request que enlaza este ticket.
+  - type: dropdown
+    id: tipo
+    attributes:
+      label: Tipo de cambio
+      options: ["Estándar (preaprobado, bajo riesgo)", "Normal (requiere revisión)", "Emergencia (restablecer un servicio caído)"]
+    validations:
+      required: true
+  - type: dropdown
+    id: ambito
+    attributes:
+      label: Ámbito
+      options: ["Aplicación (backend o front)", "Infraestructura (Render, Aiven, Vercel)", "Documentación", "Calendario / alcance"]
+    validations:
+      required: true
+  - type: textarea
+    id: descripcion
+    attributes:
+      label: Descripción del cambio y motivo
+    validations:
+      required: true
+  - type: dropdown
+    id: riesgo
+    attributes:
+      label: Riesgo
+      options: ["Bajo", "Medio", "Alto"]
+    validations:
+      required: true
+  - type: textarea
+    id: reversa
+    attributes:
+      label: Plan de reversa (cómo volver atrás)
+    validations:
+      required: true
+  - type: input
+    id: ventana
+    attributes:
+      label: Ventana propuesta (fecha y hora, Lima)

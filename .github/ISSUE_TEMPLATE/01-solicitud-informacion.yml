@@ -1,0 +1,27 @@
+name: "REC-INFO-01 · Solicitud de información"
+description: Pedir información sobre el sistema (estado, reportes, documentación, uso). Prioridad baja.
+title: "[REC-INFO-01] "
+labels: ["tipo:información", "prioridad:baja", "estado:1-registrada"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Este repositorio es público: no escribas contraseñas, tokens, DNI completos ni datos personales.**
+        Una solicitud NO es un fallo. Si algo dejó de funcionar, registra una incidencia (fuera del alcance de este formulario).
+  - type: input
+    id: solicitante
+    attributes:
+      label: Solicitante (nombre y rol)
+      placeholder: "Ej. Operador de almacén"
+    validations:
+      required: true
+  - type: textarea
+    id: informacion
+    attributes:
+      label: ¿Qué información necesitas?
+    validations:
+      required: true
+  - type: textarea
+    id: uso
+    attributes:
+      label: ¿Para qué la necesitas? (opcional)
