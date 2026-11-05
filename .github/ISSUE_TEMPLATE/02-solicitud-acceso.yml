@@ -1,0 +1,46 @@
+name: "REC-ACT-01 · Solicitud de acceso"
+description: Alta, cambio de rol o baja de un usuario del sistema. Requiere aprobación formal. Prioridad media.
+title: "[REC-ACT-01] "
+labels: ["tipo:acceso", "prioridad:media", "estado:1-registrada"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Este repositorio es público: NO escribas contraseñas ni tokens aquí.** La clave inicial se entrega por un canal privado.
+        El acceso solo se ejecuta si el Data Owner lo aprueba con un comentario en este ticket (segregación de funciones: quien solicita no aprueba ni ejecuta).
+  - type: dropdown
+    id: accion
+    attributes:
+      label: Acción solicitada
+      options: ["Alta de usuario", "Cambio de rol", "Baja de usuario", "Restablecer acceso"]
+    validations:
+      required: true
+  - type: input
+    id: usuario
+    attributes:
+      label: Correo institucional del usuario
+      placeholder: "nombre.apellido@rentamax.pe"
+    validations:
+      required: true
+  - type: dropdown
+    id: rol
+    attributes:
+      label: Rol requerido (mínimo privilegio)
+      options: ["OPERADOR", "SUPERVISOR", "ADMINISTRADOR"]
+    validations:
+      required: true
+  - type: textarea
+    id: justificacion
+    attributes:
+      label: Justificación de negocio
+    validations:
+      required: true
+  - type: checkboxes
+    id: confirmaciones
+    attributes:
+      label: Confirmaciones
+      options:
+        - label: Entiendo que el acceso lo aprueba el Data Owner y lo ejecuta otro rol distinto al solicitante.
+          required: true
+        - label: No he incluido contraseñas ni datos personales en este ticket.
+          required: true
