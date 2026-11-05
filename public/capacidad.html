@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="color-scheme" content="dark">
+<title>Capacidad RentaMax · Medición real</title>
+<!--
+  RentaMax · Grupo 07 · APF3 · Gestión de Capacidad y Rendimiento del Servicio (ITIL 4)
+
+  Qué es: una consola que MIDE el servicio real (backend en Render + BD en Aiven) desde el navegador.
+  Complementa el simulador "ITIL Capacity Ops" del Mtro. Cárdenas, que es un MODELO simulado.
+  Aquí cada número sale de peticiones HTTP reales; nada se inventa ni se redondea a favor.
+
+  Por qué vive en el dominio de Vercel: el backend solo acepta CORS desde el front oficial (nunca "*"),
+  así que esta página debe servirse desde ese mismo dominio. No hay que cambiar el backend.
+
+  Seguridad: la clave se escribe aquí, viaja solo a /api/auth/login del backend indicado, el token
+  se guarda únicamente en memoria (no en localStorage) y desaparece al cerrar o recargar la pestaña.
+-->
+<style>
+  :root{
+    --bg:#090d16; --card:#111827; --card2:#0b1220; --border:#1f2937; --text:#e5e7eb; --muted:#9ca3af;
+    --cyan:#22d3ee; --green:#34d399; --amber:#fbbf24; --red:#f87171; --violet:#a78bfa;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html{color-scheme:dark}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border);background:var(--card);position:sticky;top:0;z-index:5}
+  h1{font-size:17px;margin:0}
+  h1 small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+  h2{font-size:12px;letter-spacing:.08em;text-transform:uppercase;margin:0 0 10px;color:var(--cyan)}
+  main{max-width:1240px;margin:0 auto;padding:16px;display:grid;gap:16px;grid-template-columns:minmax(0,5fr) minmax(0,7fr)}
+  @media(max-width:900px){main{grid-template-columns:minmax(0,1fr)}}
+  .full{grid-column:1/-1}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;min-width:0}
+  label{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px}
+  input,select,textarea{width:100%;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 10px;font:inherit}
+  input:focus,select:focus,button:focus-visible{outline:2px solid var(--cyan);outline-offset:1px}
+  input[type=range]{padding:0;accent-color:var(--cyan)}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .row>*{flex:1 1 auto}
+  button{cursor:pointer;border:1px solid var(--border);background:#1f2937;color:var(--text);border-radius:8px;padding:8px 12px;font:inherit;font-weight:600}
+  button:hover{background:#273244}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  button.primary{background:linear-gradient(90deg,#06b6d4,#10b981);color:#04121a;border:0}
+  button.danger{border-color:#7f1d1d;color:var(--red)}
+  .badge{display:inline-flex;gap:8px;align-items:center;border:1px solid var(--border);border-radius:999px;padding:4px 12px;font-size:12px;font-weight:600}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+  .ok .dot{background:var(--green)} .warn .dot{background:var(--amber)} .bad .dot{background:var(--red)}
+  .ok{color:var(--green);border-color:#065f46} .warn{color:var(--amber);border-color:#78350f} .bad{color:var(--red);border-color:#7f1d1d}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:12px}
+  .tile{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center}
+  .tile b{display:block;font:700 20px var(--mono)}
+  .tile span{font-size:11px;color:var(--muted)}
+  canvas{width:100%;height:170px;display:block;background:#000;border:1px solid var(--border);border-radius:10px}
+  .legend{display:flex;gap:14px;font:11px var(--mono);color:var(--muted);margin:6px 2px 0;flex-wrap:wrap}
+  #log{background:#000;border:1px solid var(--border);border-radius:10px;padding:8px 10px;height:130px;overflow:auto;font:12px var(--mono);color:#cbd5e1}
+  #log div{margin:2px 0} .l-ok{color:var(--green)} .l-warn{color:var(--amber)} .l-bad{color:var(--red)} .l-info{color:var(--cyan)}
+  .scroll{overflow-x:auto}
+  table{border-collapse:collapse;width:100%;font-size:12px}
+  th,td{padding:6px 8px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap}
+  th:first-child,td:first-child{text-align:left}
+  th{color:var(--muted);font-weight:600}
+  td.verdict{text-align:left}
+  .note{font-size:12px;color:var(--muted)}
+  .note b{color:var(--text)}
+  .grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
+  textarea{font:12px var(--mono);min-height:150px;resize:vertical}
+  .sim{border-left:3px solid var(--violet);padding-left:10px}
+  @media print{ header button,.noprint{display:none!important} body{background:#fff;color:#000} .card{border-color:#999;background:#fff} th,td{border-color:#ccc} }
+</style>
+</head>
+<body>
+<header>
+  <h1>RentaMax · Capacidad y Rendimiento (medición real)
+    <small>Grupo 07 · APF3 · ITIL 4 · Backend Render + BD Aiven + Front Vercel</small></h1>
+  <div class="row" style="flex:0 0 auto">
+    <span id="badge" class="badge"><span class="dot"></span><span id="badgeTxt">Sin conectar</span></span>
+  </div>
+</header>
+
+<main>
+<!-- ===================== IZQUIERDA: CONTROLES ===================== -->
+<section class="card">
+  <h2>1 · Conexión al servicio real</h2>
+  <label for="url">URL pública del backend (HTTPS)</label>
+  <input id="url" value="https://rentamax-backend.onrender.com" autocomplete="off" spellcheck="false">
+  <div class="row" style="margin-top:10px">
+    <button id="btnWake" class="primary">Despertar servicio (arranque en frío)</button>
+    <button id="btnWakeStop" class="danger" disabled>Cancelar</button>
+  </div>
+  <p class="note">El plan Free de Render se duerme a los 15 min sin tráfico y tarda cerca de 1 minuto en responder. Ese tiempo es parte del análisis de capacidad.</p>
+
+  <label for="email">Correo del usuario de pruebas (rol OPERADOR)</label>
+  <input id="email" value="carlos.mendoza@rentamax.pe" autocomplete="off" spellcheck="false">
+  <label for="password">Clave (no se guarda; solo se envía a /api/auth/login)</label>
+  <input id="password" type="password" autocomplete="off">
+  <div class="row" style="margin-top:10px">
+    <button id="btnLogin">Iniciar sesión</button>
+    <span id="loginState" class="note" style="flex:2 1 auto">Sin sesión. /api/health no la necesita.</span>
+  </div>
+
+  <h2 style="margin-top:22px">2 · Prueba de carga</h2>
+  <label for="ep">Endpoint a medir</label>
+  <select id="ep">
+    <option value="/api/health">GET /api/health (público · incluye SELECT 1 a la BD)</option>
+    <option value="/api/equipos" selected>GET /api/equipos (JWT · consulta JPA a Aiven)</option>
+    <option value="mix">Mezcla: equipos + categorías + clientes (JWT)</option>
+  </select>
+  <label for="vus">Usuarios virtuales concurrentes: <b id="vusV">10</b></label>
+  <input id="vus" type="range" min="1" max="40" value="10">
+  <label for="total">Peticiones totales: <b id="totalV">100</b></label>
+  <input id="total" type="range" min="20" max="1000" step="20" value="100">
+  <label for="think">Tiempo de espera entre peticiones de cada usuario (ms; 0 = saturación)</label>
+  <input id="think" type="number" min="0" max="10000" value="0">
+  <div class="row" style="margin-top:12px">
+    <button id="btnRun" class="primary">Ejecutar prueba</button>
+    <button id="btnLadder">Escalera 1→5→10→20</button>
+    <button id="btnStop" class="danger" disabled>Detener</button>
+  </div>
+  <p class="note">Límite de seguridad: 40 usuarios y 1000 peticiones por corrida. Esto golpea producción real: no lo ejecutes durante otra demostración.</p>
+</section>
+
+<!-- ===================== DERECHA: TELEMETRÍA ===================== -->
+<section class="card">
+  <h2>3 · Telemetría en vivo (medida desde este navegador)</h2>
+  <div class="tiles">
+    <div class="tile"><b id="tDone">0</b><span>Completadas</span></div>
+    <div class="tile"><b id="tRps">0</b><span>Peticiones/s</span></div>
+    <div class="tile"><b id="tAvg">0</b><span>Latencia prom. (ms)</span></div>
+    <div class="tile"><b id="tP95">0</b><span>p95 (ms)</span></div>
+    <div class="tile"><b id="tErr">0</b><span>Errores</span></div>
+  </div>
+  <canvas id="cv" width="800" height="170" aria-label="Gráfico de latencia p95 y peticiones por segundo"></canvas>
+  <div class="legend"><span style="color:var(--cyan)">━ Peticiones/s</span><span style="color:var(--green)">━ Latencia p95 (ms)</span><span style="color:var(--amber)">┅ 500 ms (criterio cátedra)</span><span style="color:var(--red)">┅ 1000 ms (SLA propuesto)</span></div>
+  <label style="margin-top:12px">Registro de eventos</label>
+  <div id="log" role="log"></div>
+  <p class="note" style="margin-top:8px"><b>CPU y RAM del servidor:</b> el navegador no puede verlas. Se toman del panel Metrics de Render (o de su API) en la ventana UTC exacta que esta consola imprime, y se contrastan con estos números.</p>
+</section>
+
+<!-- ===================== RESULTADOS ===================== -->
+<section class="card full">
+  <div class="row" style="justify-content:space-between">
+    <h2 style="margin:0">4 · Resultados de las corridas</h2>
+    <div class="row noprint" style="flex:0 0 auto">
+      <button id="btnCsv">Descargar CSV</button>
+      <button id="btnClear" class="danger">Borrar corridas</button>
+    </div>
+  </div>
+  <div class="scroll"><table id="tbl">
+    <thead><tr><th>Endpoint</th><th>Usuarios</th><th>Peticiones</th><th>OK/Total</th><th>Prom (ms)</th><th>p50</th><th>p95</th><th>p99</th><th>Máx</th><th>Dur (s)</th><th>RPS</th><th>Little N≈X·R</th><th>Ventana UTC</th><th>Veredicto</th></tr></thead>
+    <tbody id="tbody"><tr><td colspan="14" class="note">Aún no hay corridas.</td></tr></tbody>
+  </table></div>
+  <p class="note">Al contrastar con Render: el conteo del servidor ≈ peticiones de la corrida + algunas peticiones previas CORS (OPTIONS, una por usuario al inicio) + el login. Veredicto: <b>Cumple &lt;500 ms</b> = criterio de la cátedra (APF2). <b>Cumple p95 &lt;1 s</b> = SLA propuesto por el grupo. Cualquier error (HTTP ≠ 2xx, timeout o CORS) invalida el "cumple". La ley de Little (N≈X·R) comprueba que la medición es coherente: debe parecerse al número de usuarios virtuales.</p>
+</section>
+
+<!-- ===================== PLAN DE CAPACIDAD ===================== -->
+<section class="card full">
+  <h2>5 · Plan de capacidad (se calcula con TUS corridas)</h2>
+  <p class="note">Modelo de sistema cerrado: usuarios = X · (R + Z). <b>X</b> = peticiones/s sostenidas con SLA cumplido, <b>R</b> = latencia media en esa corrida, <b>Z</b> = tiempo de reflexión del alumno entre acciones. Se deja un margen del 30 % (utilización máxima 70 %). Es una <b>proyección lineal por CPU</b>: debe confirmarse repitiendo la prueba tras escalar.</p>
+  <div class="grid3">
+    <div><label for="z">Z · segundos entre acciones</label><input id="z" type="number" min="1" value="10"></div>
+    <div><label for="sla">SLA objetivo p95 (ms)</label><input id="sla" type="number" min="100" value="1000"></div>
+    <div><label for="cpuBase">CPU del plan donde mediste</label><input id="cpuBase" type="number" step="0.05" min="0.05" value="0.15"></div>
+    <div><label for="pool">Pool HikariCP por instancia</label><input id="pool" type="number" min="1" value="10"></div>
+    <div><label for="maxConn">max_connections de la BD (Aiven Free = 76)</label><input id="maxConn" type="number" min="1" value="76"></div>
+    <div><label for="targets">Alumnos concurrentes a proyectar</label><input id="targets" value="2000, 6000, 10000, 14000"></div>
+  </div>
+  <div class="scroll" style="margin-top:12px"><table id="tiers">
+    <thead><tr><th>Instancia Render (editable)</th><th>CPU</th><th>US$/mes por instancia</th><th>¿Escala a &gt;1?</th></tr></thead>
+    <tbody>
+      <tr><td>Free · 512 MB</td><td><input class="tcpu" value="0.15" style="width:80px"></td><td><input class="tprice" value="0" style="width:80px"></td><td class="verdict">No (máx. 1 instancia)</td></tr>
+      <tr><td>&lt;1 CPU · 512 MB</td><td><input class="tcpu" value="0.5" style="width:80px"></td><td><input class="tprice" value="7" style="width:80px"></td><td class="verdict">Sí</td></tr>
+      <tr><td>1 CPU · 2 GB</td><td><input class="tcpu" value="1" style="width:80px"></td><td><input class="tprice" value="25" style="width:80px"></td><td class="verdict">Sí</td></tr>
+      <tr><td>2 CPU · 4 GB</td><td><input class="tcpu" value="2" style="width:80px"></td><td><input class="tprice" value="85" style="width:80px"></td><td class="verdict">Sí</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">Precios según render.com/pricing (consultado el 04-nov-2026). El CPU del plan de 512 MB de pago es un supuesto del grupo (Render publica "menos de 1 CPU"): confírmalo y corrígelo si hace falta.</p>
+  <div id="planOut" style="margin-top:12px"></div>
+</section>
+
+<!-- ===================== RESUMEN ===================== -->
+<section class="card full">
+  <h2>6 · Resumen listo para pegar en el informe</h2>
+  <textarea id="summary" readonly placeholder="Ejecuta al menos una corrida para generar el resumen."></textarea>
+  <div class="row noprint" style="margin-top:8px"><button id="btnCopy">Copiar resumen</button><button onclick="window.print()">Imprimir / guardar PDF</button></div>
+  <p class="note sim">Esta consola mide el sistema real. El simulador del docente (<i>ITIL Capacity Ops</i>) modela escenarios de 2 000 a 14 000 alumnos con controles (balanceador, caché, índices SQL, CDN, WAF, Circuit Breaker). Se usan juntos: lo medido aquí calibra lo que se proyecta allá.</p>
+</section>
+</main>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const S = { token:null, running:false, ctl:null, wakeCtl:null, runs:[], coldStart:null, proto:null };
+
+/* ---------- utilidades ---------- */
+function base(){ return $('url').value.trim().replace(/\/+$/,''); }
+function urlOk(u){ try{ const x=new URL(u); return x.protocol==='https:' || x.hostname==='localhost' || x.hostname==='127.0.0.1'; }catch(e){ return false; } }
+function log(msg, cls='info'){
+  const d=document.createElement('div'); d.className='l-'+cls;
+  d.textContent='['+new Date().toLocaleTimeString()+'] '+msg;
+  $('log').appendChild(d); $('log').scrollTop=$('log').scrollHeight;
+}
+function badge(txt, cls){ $('badgeTxt').textContent=txt; $('badge').className='badge '+(cls||''); }
+function pct(sorted,p){ if(!sorted.length) return 0; let i=Math.ceil(p/100*sorted.length); if(i<1)i=1; return sorted[i-1]; }
+function stats(ms){
+  const s=[...ms].sort((a,b)=>a-b); const n=s.length;
+  return { n, avg:n?s.reduce((a,b)=>a+b,0)/n:0, p50:pct(s,50), p95:pct(s,95), p99:pct(s,99), max:n?s[n-1]:0 };
+}
+const f0=x=>Math.round(x).toLocaleString('es-PE');
+const f1=x=>(Math.round(x*10)/10).toLocaleString('es-PE');
+const num=el=>parseFloat(String(el.value).replace(',','.'));
+
+function setRunning(on){
+  S.running=on;
+  ['btnRun','btnLadder','btnWake','btnLogin'].forEach(id=>$(id).disabled=on);
+  $('btnStop').disabled=!on;
+}
+
+/* ---------- 1) Arranque en frío ---------- */
+async function wake(){
+  const b=base(); if(!urlOk(b)){ log('URL inválida: usa https://… (o localhost para pruebas).','bad'); return; }
+  S.wakeCtl={cancel:false}; const ctl=S.wakeCtl;
+  $('btnWake').disabled=true; $('btnWakeStop').disabled=false;
+  badge('Despertando servicio…','warn'); log('Enviando GET /api/health hasta recibir estado UP (máx. 180 s)…','info');
+  const t0=performance.now(); let up=false;
+  while(!ctl.cancel && performance.now()-t0<180000){
+    try{
+      const c=new AbortController(); const to=setTimeout(()=>c.abort(),20000);
+      const r=await fetch(b+'/api/health',{cache:'no-store',signal:c.signal}); clearTimeout(to);
+      if(r.ok){ const j=await r.json().catch(()=>({})); if(j.estado==='UP'){ up=true; break; } }
+    }catch(e){ /* mientras Render arranca, la conexión falla o devuelve la página de carga */ }
+    badge('Despertando… '+Math.round((performance.now()-t0)/1000)+' s','warn');
+    await sleep(3000);
+  }
+  $('btnWake').disabled=false; $('btnWakeStop').disabled=true;
+  if(up){
+    S.coldStart=(performance.now()-t0)/1000;
+    badge('Servicio UP · BD UP','ok');
+    log('Servicio y base de datos UP. Tiempo hasta responder 200: '+f1(S.coldStart)+' s','ok');
+    detectProto(b+'/api/health');
+  } else if(ctl.cancel){ badge('Cancelado','warn'); log('Espera cancelada.','warn'); }
+  else { badge('Sin respuesta','bad'); log('No respondió UP en 180 s. Revisa el servicio en Render.','bad'); }
+}
+function detectProto(u){
+  try{ const e=performance.getEntriesByName(u).pop(); S.proto=e&&e.nextHopProtocol?e.nextHopProtocol:null;
+       if(S.proto) log('Protocolo de red: '+S.proto+(S.proto==='h2'?' (multiplexado: sin límite de 6 conexiones)':' (ojo: HTTP/1.1 limita a 6 conexiones por host y puede inflar la latencia con >6 usuarios)'),S.proto==='h2'?'info':'warn'); }catch(e){}
+}
+
+/* ---------- 2) Login ---------- */
+async function login(){
+  const b=base(); if(!urlOk(b)){ log('URL inválida.','bad'); return; }
+  const email=$('email').value.trim(), password=$('password').value;
+  if(!email||!password){ log('Escribe correo y clave.','warn'); return; }
+  $('btnLogin').disabled=true;
+  try{
+    const r=await fetch(b+'/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password})});
+    const j=await r.json().catch(()=>({}));
+    if(r.ok && j.token){
+      S.token=j.token; $('password').value='';
+      $('loginState').textContent='Sesión activa: '+(j.email||email)+' · rol '+(j.rol||'?')+' (token solo en memoria)';
+      log('Login correcto (HTTP '+r.status+', rol '+(j.rol||'?')+'). Token en memoria, no se muestra.','ok');
+    } else { S.token=null; log('Login rechazado (HTTP '+r.status+'). Revisa correo y clave.','bad'); }
+  }catch(e){ log('No se pudo contactar al backend (¿dormido o CORS?): '+e.message,'bad'); }
+  $('btnLogin').disabled=false;
+}
+
+/* ---------- gráfico ---------- */
+const CH={rps:[],p95:[]};
+function draw(){
+  const cv=$('cv'), dpr=window.devicePixelRatio||1, w=cv.clientWidth, h=cv.clientHeight;
+  if(cv.width!==w*dpr){ cv.width=w*dpr; cv.height=h*dpr; }
+  const g=cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,w,h);
+  g.strokeStyle='#1f2937'; g.lineWidth=1; for(let i=1;i<4;i++){ const y=h*i/4; g.beginPath(); g.moveTo(0,y); g.lineTo(w,y); g.stroke(); }
+  const maxMs=Math.max(1200,...CH.p95), maxRps=Math.max(10,...CH.rps);
+  const line=(arr,max,color)=>{ g.strokeStyle=color; g.lineWidth=2; g.beginPath();
+    arr.forEach((v,i)=>{ const x=arr.length>1? i*(w/59) : 0, y=h-6-(v/max)*(h-12); i?g.lineTo(x,y):g.moveTo(x,y); }); g.stroke(); };
+  const guide=(ms,color)=>{ const y=h-6-(ms/maxMs)*(h-12); g.strokeStyle=color; g.setLineDash([5,5]); g.beginPath(); g.moveTo(0,y); g.lineTo(w,y); g.stroke(); g.setLineDash([]); };
+  guide(500,'#fbbf24'); guide(1000,'#f87171');
+  line(CH.rps,maxRps,'#22d3ee'); line(CH.p95,maxMs,'#34d399');
+  g.fillStyle='#9ca3af'; g.font='11px ui-monospace,monospace';
+  g.fillText(f0(maxMs)+' ms',4,12); g.fillText(f0(maxRps)+' rps',w-62,12);
+}
+window.addEventListener('resize',draw);
+
+/* ---------- motor de carga ---------- */
+async function runLoad({ep,vus,total,think}){
+  const b=base(); if(!urlOk(b)) throw new Error('URL inválida');
+  const paths = ep==='mix' ? ['/api/equipos','/api/categorias','/api/clientes'] : [ep];
+  if(paths.some(p=>p!=='/api/health') && !S.token) throw new Error('Inicia sesión primero (este endpoint requiere JWT).');
+  const ctl=S.ctl; const samples=[]; const codes={};
+  const tStartIso=new Date().toISOString(); const t0=performance.now(); let next=0;
+  CH.rps.length=0; CH.p95.length=0;
+
+  const tick=setInterval(()=>{
+    const now=performance.now()-t0, win=samples.filter(s=>s.end>now-1000);
+    const w=stats(win.map(s=>s.ms)), all=stats(samples.map(s=>s.ms));
+    CH.rps.push(win.length); CH.p95.push(w.p95); if(CH.rps.length>60){CH.rps.shift();CH.p95.shift();}
+    $('tDone').textContent=samples.length; $('tRps').textContent=win.length; $('tAvg').textContent=f0(all.avg); $('tP95').textContent=f0(w.p95);
+    $('tErr').textContent=samples.filter(s=>s.code<200||s.code>299).length; draw();
+  },500);
+
+  async function vu(){
+    while(!ctl.signal.aborted){
+      const i=next++; if(i>=total) break;
+      const p=paths[i%paths.length]; const s=performance.now(); let code=0;
+      const c2=new AbortController(); const to=setTimeout(()=>c2.abort(),30000);
+      const onAbort=()=>c2.abort(); ctl.signal.addEventListener('abort',onAbort,{once:true});
+      try{
+        // OJO: con cache:'no-store' el navegador repite la petición previa CORS (OPTIONS) en CADA llamada,
+        // duplicando la carga en el servidor y sumando un viaje de ida y vuelta a la latencia medida.
+        // Por eso solo /api/health (petición simple, sin preflight) usa no-store.
+        const r=await fetch(b+p,{cache:p==='/api/health'?'no-store':'default',signal:c2.signal,headers:p==='/api/health'?{}:{Authorization:'Bearer '+S.token}});
+        await r.arrayBuffer(); code=r.status;
+      }catch(e){ code=0; }
+      clearTimeout(to); ctl.signal.removeEventListener('abort',onAbort);
+      const e=performance.now(); samples.push({end:e-t0,ms:e-s,code}); codes[code]=(codes[code]||0)+1;
+      if(think>0) await sleep(think*(0.5+Math.random()));
+    }
+  }
+  await Promise.all(Array.from({length:vus},vu));
+  clearInterval(tick);
+
+  const dur=(performance.now()-t0)/1000, st=stats(samples.map(s=>s.ms));
+  const ok=samples.filter(s=>s.code>=200&&s.code<=299).length;
+  const rps=samples.length/dur;
+  return { ep, vus, total:samples.length, ok, errors:samples.length-ok, codes, ...st, dur, rps, little:rps*st.avg/1000,
+           ini:tStartIso, fin:new Date().toISOString(), aborted:ctl.signal.aborted, think };
+}
+function verdict(r){
+  if(r.aborted) return ['Detenida','warn'];
+  if(r.errors>0) return ['Con errores','bad'];
+  if(r.p95<500) return ['Cumple <500 ms','ok'];
+  if(r.p95<1000) return ['Cumple p95 <1 s','ok'];
+  return ['No cumple','bad'];
+}
+
+async function execute(configs){
+  setRunning(true); S.ctl=new AbortController();
+  badge('Probando…','warn');
+  try{
+    for(const cfg of configs){
+      if(S.ctl.signal.aborted) break;
+      log('Corrida: '+cfg.ep+' · '+cfg.vus+' usuarios · '+cfg.total+' peticiones','info');
+      const r=await runLoad(cfg); S.runs.push(r); renderRuns();
+      const [v,c]=verdict(r);
+      log('→ prom '+f0(r.avg)+' ms · p95 '+f0(r.p95)+' ms · '+f1(r.rps)+' rps · errores '+r.errors+' · '+v, c==='ok'?'ok':(c==='bad'?'bad':'warn'));
+      if(r.errors>0) log('   códigos HTTP: '+Object.entries(r.codes).map(([k,v])=>(k==='0'?'red/CORS/timeout':k)+' ×'+v).join(' · '),'warn');
+      await sleep(3000);
+    }
+  }catch(e){ log(e.message,'bad'); }
+  setRunning(false); badge(S.coldStart!==null?'Servicio UP · BD UP':'Listo', S.coldStart!==null?'ok':'');
+  renderPlan(); renderSummary();
+}
+function cfgFromUi(){ return { ep:$('ep').value, vus:+$('vus').value, total:+$('total').value, think:Math.max(0,+$('think').value||0) }; }
+
+/* ---------- tabla de resultados ---------- */
+function renderRuns(){
+  const tb=$('tbody'); tb.innerHTML='';
+  if(!S.runs.length){ tb.innerHTML='<tr><td colspan="14" class="note">Aún no hay corridas.</td></tr>'; return; }
+  S.runs.forEach(r=>{
+    const [v,c]=verdict(r); const tr=document.createElement('tr');
+    tr.innerHTML='<td>'+r.ep+'</td><td>'+r.vus+'</td><td>'+r.total+'</td><td>'+r.ok+'/'+r.total+'</td><td>'+f0(r.avg)+'</td><td>'+f0(r.p50)+'</td><td>'+f0(r.p95)+'</td><td>'+f0(r.p99)+'</td><td>'+f0(r.max)+'</td><td>'+f1(r.dur)+'</td><td>'+f1(r.rps)+'</td><td>'+f1(r.little)+'</td><td>'+r.ini.slice(11,19)+'–'+r.fin.slice(11,19)+'</td><td class="verdict '+c+'" style="color:var(--'+(c==='ok'?'green':c==='bad'?'red':'amber')+')">'+v+'</td>';
+    tb.appendChild(tr);
+  });
+}
+
+/* ---------- 5) plan de capacidad ---------- */
+function tiers(){
+  const cpu=[...document.querySelectorAll('.tcpu')], price=[...document.querySelectorAll('.tprice')];
+  const names=['Free · 512 MB','<1 CPU · 512 MB','1 CPU · 2 GB','2 CPU · 4 GB'];
+  return names.map((n,i)=>({name:n,cpu:num(cpu[i]),price:num(price[i]),scales:i>0}));
+}
+function capacityBase(){
+  const sla=num($('sla'));
+  const good=S.runs.filter(r=>!r.aborted&&r.errors===0&&r.p95<=sla&&r.total>=20);
+  if(!good.length) return null;
+  return good.reduce((a,b)=>b.rps>a.rps?b:a);   // la corrida de mayor throughput que aún cumple el SLA
+}
+function plan(){
+  const cb=capacityBase(); if(!cb) return null;
+  const Z=num($('z')), cpuBase=num($('cpuBase')), pool=num($('pool')), maxConn=num($('maxConn'));
+  const R=cb.avg/1000, uMax=cb.rps*(R+Z), uSafe=0.7*uMax;
+  const targets=$('targets').value.split(/[;,\s]+/).map(Number).filter(x=>x>0);
+  const T=tiers();
+  const rows=targets.map(u=>{
+    const xReq=u/(R+Z); const opts=T.map(t=>{
+      const perInst=0.7*cb.rps*(t.cpu/cpuBase);              // RPS seguros por instancia de ese plan
+      let n=Math.max(1,Math.ceil(xReq/perInst));
+      const maxInst=t.scales?Infinity:1;
+      const feasible=n<=maxInst, dbOk=n*pool<=maxConn;
+      return {t,n,cost:n*t.price,feasible,dbOk};
+    });
+    const valid=opts.filter(o=>o.feasible&&o.dbOk).sort((a,b)=>a.cost-b.cost||a.n-b.n)[0];
+    return {u,xReq,opts,rec:valid||null};
+  });
+  return {cb,R,Z,uMax,uSafe,rows,pool,maxConn,sla:num($('sla'))};
+}
+function renderPlan(){
+  const out=$('planOut'); const p=plan();
+  if(!p){ out.innerHTML='<p class="note"><b>Sin base de cálculo todavía.</b> Hace falta al menos una corrida con 0 errores y p95 ≤ '+num($('sla'))+' ms (usa pocos usuarios, por ejemplo 2–5, para encontrar el nivel que sí cumple).</p>'; return; }
+  let h='<div class="tiles"><div class="tile"><b>'+f1(p.cb.rps)+'</b><span>RPS con SLA cumplido ('+p.cb.vus+' usuarios)</span></div>'+
+        '<div class="tile"><b>'+f0(p.cb.avg)+' ms</b><span>R · latencia media</span></div>'+
+        '<div class="tile"><b>'+f0(p.uMax)+'</b><span>Alumnos activos al 100 %</span></div>'+
+        '<div class="tile"><b>'+f0(p.uSafe)+'</b><span>Alumnos con margen 30 %</span></div></div>';
+  h+='<div class="scroll"><table><thead><tr><th>Alumnos concurrentes</th><th>RPS requeridos</th>'+tiers().map(t=>'<th>'+t.name+'</th>').join('')+'<th>Recomendado</th></tr></thead><tbody>';
+  p.rows.forEach(r=>{
+    h+='<tr><td>'+f0(r.u)+'</td><td>'+f1(r.xReq)+'</td>';
+    r.opts.forEach(o=>{
+      if(!o.feasible) h+='<td class="note">✗ no escala ('+o.n+' inst.)</td>';
+      else h+='<td>'+o.n+' × $'+o.t.price+' = <b>$'+f0(o.cost)+'</b>'+(o.dbOk?'':' <span style="color:var(--amber)" title="Excede max_connections de la BD">⚠BD</span>')+'</td>';
+    });
+    h+='<td class="verdict" style="color:var(--green)">'+(r.rec?r.rec.t.name+' · '+r.rec.n+' inst. · $'+f0(r.rec.cost)+'/mes':'<span style="color:var(--red)">Requiere BD mayor o rediseño (caché)</span>')+'</td></tr>';
+  });
+  h+='</tbody></table></div><p class="note">⚠BD = '+p.pool+' conexiones × instancias supera max_connections ('+p.maxConn+'): hay que subir de plan la BD, bajar el pool o reducir consultas con caché. Costos solo de cómputo de Render (sin BD ni ancho de banda).</p>';
+  out.innerHTML=h;
+}
+
+/* ---------- 6) resumen ---------- */
+function renderSummary(){
+  if(!S.runs.length){ $('summary').value=''; return; }
+  const L=[]; L.push('PRUEBAS DE CARGA REALES · RentaMax · '+base());
+  L.push('Medido desde el navegador del grupo (protocolo '+(S.proto||'n/d')+'). Arranque en frío: '+(S.coldStart!==null?f1(S.coldStart)+' s':'no medido en esta sesión')+'.');
+  S.runs.forEach((r,i)=>L.push((i+1)+') '+r.ep+' · '+r.vus+' usuarios · '+r.total+' pet. · '+r.ok+'/'+r.total+' OK · prom '+f0(r.avg)+' ms · p50 '+f0(r.p50)+' · p95 '+f0(r.p95)+' · p99 '+f0(r.p99)+' · máx '+f0(r.max)+' · '+f1(r.rps)+' rps · ventana UTC '+r.ini.slice(0,19)+'Z → '+r.fin.slice(0,19)+'Z · '+verdict(r)[0]));
+  const p=plan();
+  if(p){ L.push('');
+    L.push('CAPACIDAD: con SLA p95 ≤ '+p.sla+' ms el servicio sostiene '+f1(p.cb.rps)+' rps (corrida de '+p.cb.vus+' usuarios, R = '+f0(p.cb.avg)+' ms).');
+    L.push('Con Z = '+p.Z+' s entre acciones, eso equivale a ~'+f0(p.uMax)+' alumnos activos (~'+f0(p.uSafe)+' con margen del 30 %).');
+    p.rows.forEach(r=>L.push('  '+f0(r.u)+' alumnos → '+f1(r.xReq)+' rps → '+(r.rec?r.rec.t.name+' × '+r.rec.n+' (US$ '+f0(r.rec.cost)+'/mes)':'requiere BD mayor o caché')));
+    L.push('Supuesto: escala lineal por CPU; confirmar repitiendo la prueba tras escalar.');
+  } else L.push('','Aún no hay una corrida con 0 errores y p95 dentro del SLA para calcular el plan.');
+  $('summary').value=L.join('\n');
+}
+
+/* ---------- exportar ---------- */
+function csv(){
+  const head='ini_utc,fin_utc,endpoint,usuarios,peticiones,ok,errores,prom_ms,p50_ms,p95_ms,p99_ms,max_ms,duracion_s,rps,little';
+  const rows=S.runs.map(r=>[r.ini,r.fin,r.ep,r.vus,r.total,r.ok,r.errors,f1(r.avg),f1(r.p50),f1(r.p95),f1(r.p99),f1(r.max),r.dur.toFixed(2),r.rps.toFixed(2),r.little.toFixed(2)].join(','));
+  return [head,...rows].join('\n');
+}
+
+/* ---------- eventos ---------- */
+$('vus').oninput=e=>$('vusV').textContent=e.target.value;
+$('total').oninput=e=>$('totalV').textContent=e.target.value;
+$('btnWake').onclick=wake;
+$('btnWakeStop').onclick=()=>{ if(S.wakeCtl) S.wakeCtl.cancel=true; };
+$('btnLogin').onclick=login;
+$('password').addEventListener('keydown',e=>{ if(e.key==='Enter') login(); });
+$('btnRun').onclick=()=>execute([cfgFromUi()]);
+$('btnLadder').onclick=()=>{ const c=cfgFromUi(); execute([1,5,10,20].map(v=>({...c,vus:v,total:Math.max(v*10,50)}))); };
+$('btnStop').onclick=()=>{ if(S.ctl) S.ctl.abort(); log('Detención solicitada…','warn'); };
+$('btnClear').onclick=()=>{ S.runs=[]; renderRuns(); renderPlan(); renderSummary(); };
+$('btnCsv').onclick=()=>{ if(!S.runs.length) return; const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv()],{type:'text/csv'})); a.download='rendimiento_rentamax_'+new Date().toISOString().slice(0,16).replace(/[:T]/g,'')+'.csv'; a.click(); };
+$('btnCopy').onclick=async()=>{ try{ await navigator.clipboard.writeText($('summary').value); log('Resumen copiado.','ok'); }catch(e){ $('summary').select(); log('Selecciona y copia manualmente (Ctrl+C).','warn'); } };
+['z','sla','cpuBase','pool','maxConn','targets'].forEach(id=>$(id).addEventListener('input',()=>{ renderPlan(); renderSummary(); }));
+document.querySelectorAll('.tcpu,.tprice').forEach(el=>el.addEventListener('input',()=>{ renderPlan(); renderSummary(); }));
+draw(); renderPlan();
+log('Consola lista. 1) Despierta el servicio  2) Inicia sesión  3) Ejecuta la prueba.','info');
+</script>
+</body>
+</html>

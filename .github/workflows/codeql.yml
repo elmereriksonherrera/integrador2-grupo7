@@ -1,0 +1,37 @@
+name: Análisis estático (CodeQL)
+
+# Etapa "Análisis estático" del flujo CI/CD visto en clase (Sesión 23: compilación y pruebas →
+# análisis estático → entornos Docker → producción). Detecta vulnerabilidades y deuda técnica en
+# Java (backend) y TypeScript (front). Los resultados quedan en la pestaña Security > Code scanning.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 9 * * 1"   # cada lunes: revisión periódica aunque no haya cambios
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  analizar:
+    name: CodeQL (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [java-kotlin, javascript-typescript]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
